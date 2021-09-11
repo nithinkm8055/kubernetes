@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-pod
+  labels:
+    tier: backend
+spec:
+  containers:
+  - name: nginxpod
+    image: nginx
+  tolerations:
+    - key: "app"
+      operator: "Equal"
+      value: "frontend-app"
+      effect: "NoSchedule"
+        
+  nodeName: node02 # can only be done at creation time

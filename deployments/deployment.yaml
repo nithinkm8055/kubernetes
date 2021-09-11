@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myapp-deployments
+  labels:
+    env: dev
+    tier: frontend
+spec:
+  selector:
+    matchLabels:
+      tier: backend
+  replicas: 2
+  template:
+    metadata:
+      name: replicationpod
+      labels:
+        tier: backend
+    spec:
+      containers:
+        - name: nginx
+          image: nginx
+# Replication Controller does not have selector field, as a result ReplicaSet also matches existing pods based on the provided label.
+  

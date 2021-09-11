@@ -1,0 +1,72 @@
+#!/bin/bash
+
+NETWORK="172.17.15"
+
+
+echo "Netns at Start: $(ip netns)"
+echo "====== Delete any existing network namespaces ======"
+ip netns  | while read ns; do
+ ns_name=$(echo $ns | cut -d " " -f1)
+ echo "deleting namespace ${ns_name}"
+ ip netns del ${ns_name}
+done
+
+echo
+echo "Deleting bridge v-net-0"
+ip link del v-net-0
+ip link del veth-red-br
+ip link del veth-blue-br
+
+echo
+echo "======== Create network namespaces (red, blue) ==========="
+for ns_name in "red" "blue"; do
+    echo "create namespace: ${ns_name}"
+    ip netns add ${ns_name}
+done
+
+echo
+echo "======== Create bridge network (v-net-0) ==========="
+echo create bridge: v-net-0
+ip link add v-net-0 type bridge
+ip link set v-net-0 up
+ip addr add ${NETWORK}.5/24 dev v-net-0
+
+echo
+echo "======== Create interfaces ==========="
+for interface in "red" "blue"; do
+    echo "Creating interface peers: veth-${interface} , veth-${interface}-br"
+    ip link add veth-${interface} type veth peer name veth-${interface}-br
+done
+
+echo
+echo "======= Attach interface to namespace ========="
+for interface in "red" "blue"; do
+    echo "Attach veth-${interface} to namespace ${interface}"
+    ip link set veth-${interface} netns ${interface}
+done
+
+echo
+echo "=======  Attach interface to bridge ==========="
+for interface in "red" "blue"; do
+    echo "Attach veth-${interface}-br to bridge v-net-0"
+    ip link set veth-${interface}-br master v-net-0
+done
+
+echo
+echo "========== Add IPs to interfaces ========="
+for interface in "red:1" "blue:2"; do
+    host_identifier=$(echo $interface | cut -d":" -f2)
+    ifc=$(echo $interface | cut -d":" -f1)
+    echo "Attach veth-${ifc} to namespace ${ifc}"
+    ip -n ${ifc} addr add ${NETWORK}.${host_identifier}/24 dev veth-${ifc}
+done
+
+echo
+echo " ====== Bring up the interface =========="
+for interface in "red" "blue"; do
+   echo "veth-${interface} in namespace ${interface} brought up"
+   ip -n ${interface} link set veth-${interface} up
+   ip link set veth-${interface}-br up
+done
+
+ip netns exec red ping ${NETWORK}.2

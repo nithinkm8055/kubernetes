@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Config
+
+clusters:
+  - name: kube-playground
+    cluster:
+      certificate-authority: ca.crt
+      server: https://kube-playground:6443
+
+users:
+  - name: my-kube-admin
+    user:
+      client-certificate: admin.crt
+      client-key: admin.key
+
+contexts:
